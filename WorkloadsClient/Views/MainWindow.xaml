@@ -1,0 +1,39 @@
+﻿<Window x:Class="WorkloadsClient.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:WorkloadsClient.Views"
+        mc:Ignorable="d"
+        Title="Main Window"
+        Width="800"
+        Height="450"
+        DataContext="{Binding Source={StaticResource Locator}, Path=MainViewModel}"
+        FontSize="14"
+        WindowStartupLocation="CenterScreen">
+    <Grid>
+        <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Orientation="Horizontal">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                <TextBlock Text="Person:" />
+                <ComboBox x:Name="cbPeople"  Width="200" ItemsSource="{Binding People, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" SelectedItem="{Binding SelectedPerson}" />
+            </StackPanel>
+            <StackPanel Margin="5,0,5,0" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <TextBlock Text="Assignment:" />
+                <ComboBox x:Name="cbAssigments" Width="200" ItemsSource="{Binding Assignments, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" SelectedItem="{Binding SelectedAssignment}" />
+            </StackPanel>
+            <StackPanel Margin="5,0,5,0" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <TextBlock Text="Workload:" />
+                <ComboBox Width="200" ItemsSource="{Binding Workloads, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" SelectedItem="{Binding SelectedWorkload}" />
+            </StackPanel>
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Bottom">
+                <Button Width="60" Height="24" Command="{Binding ExecuteCommand}" CommandParameter="Get" Content="Get" />
+            </StackPanel>
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Bottom">
+                <Button Width="60" Height="24" Command="{Binding ExecuteCommand}" CommandParameter="Start" Content="Start" />
+            </StackPanel>
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Bottom">
+                <Button Width="60" Height="24" Command="{Binding ExecuteCommand}" CommandParameter="Stop"  Content="Stop" />
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</Window>
