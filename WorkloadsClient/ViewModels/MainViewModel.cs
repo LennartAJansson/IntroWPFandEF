@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.Windows;
 
 using GalaSoft.MvvmLight;
 using GalaSoft.MvvmLight.Command;
@@ -17,6 +19,22 @@ namespace WorkloadsClient.ViewModels
         private readonly ILogger<MainViewModel> logger;
         private readonly IWorkloadService workloadsService;
 
+        public Visibility ShowStartWorkload
+        {
+            get => showStartWorkload;
+            set
+            {
+                Set(ref showStartWorkload, value, true);
+            }
+        }
+        private Visibility showStartWorkload;
+        public string Comment
+        {
+            get { return comment; }
+            set { Set(ref comment, value); }
+        }
+        private string comment;
+
         //The selected values:
         private Person person;
         //When a person is selected then filter Workloads on that person
@@ -26,6 +44,7 @@ namespace WorkloadsClient.ViewModels
             set
             {
                 Set(ref person, value);
+                ShowStartWorkload = SelectedPerson != null && SelectedAssignment != null ? Visibility.Visible : Visibility.Collapsed;
                 SetWorkloads(SelectedPerson == null ? 0 : SelectedPerson.PersonId, SelectedAssignment == null ? 0 : SelectedAssignment.AssignmentId);
             }
         }
@@ -38,6 +57,7 @@ namespace WorkloadsClient.ViewModels
             set
             {
                 Set(ref assignment, value);
+                ShowStartWorkload = SelectedPerson != null && SelectedAssignment != null ? Visibility.Visible : Visibility.Collapsed;
                 SetWorkloads(SelectedPerson == null ? 0 : SelectedPerson.PersonId, SelectedAssignment == null ? 0 : SelectedAssignment.AssignmentId);
             }
         }
@@ -47,59 +67,64 @@ namespace WorkloadsClient.ViewModels
 
         //The list of values:
         private IEnumerable<Person> people;
-        public IEnumerable<Person> People
-        {
-            get => people;
-            set => Set(ref people, value);
-        }
+        public IEnumerable<Person> People { get => people; set => Set(ref people, value); }
 
         private IEnumerable<Assignment> assignments;
-        public IEnumerable<Assignment> Assignments
-        {
-            get => assignments;
-            set => Set(ref assignments, value);
-        }
+        public IEnumerable<Assignment> Assignments { get => assignments; set => Set(ref assignments, value); }
 
         private IEnumerable<Workload> workloads;
-        public IEnumerable<Workload> Workloads
-        {
-            get => workloads;
-            set => Set(ref workloads, value);
-        }
+        public IEnumerable<Workload> Workloads { get => workloads; set => Set(ref workloads, value); }
 
 
-        public RelayCommand<string> ExecuteCommand { get; }
+        public RelayCommand GetCommand { get; }
+        public RelayCommand ClearCommand { get; }
+        public RelayCommand CreateWorkloadCommand { get; }
+        public RelayCommand<int> StopWorkloadCommand { get; }
 
         public MainViewModel(ILogger<MainViewModel> logger, IWorkloadService workloadsService)
         {
             this.logger = logger;
             this.workloadsService = workloadsService;
-            ExecuteCommand = new RelayCommand<string>(async (string parameter) => await ExecuteAsync(parameter));
+            GetCommand = new RelayCommand(async () => await GetAllAsync());
+            ClearCommand = new RelayCommand(async () => await ClearAsync());
+            CreateWorkloadCommand = new RelayCommand(async () => await CreateWorkloadAsync());
+            StopWorkloadCommand = new RelayCommand<int>(async (int parameter) => await StopWorkloadAsync(parameter));
+            ShowStartWorkload = Visibility.Collapsed;
         }
 
-        private async Task ExecuteAsync(string parameter)
+        private Task ClearAsync()
         {
-            logger.LogInformation($"Populating ViewModel, parameter is {parameter}");
-            switch (parameter)
-            {
-                case "Get":
-                    await GetAllAsync();
-                    break;
-                case "Start":
-                    break;
-                case "Stop":
-                    break;
-                default:
-                    break;
-            }
-
+            SelectedAssignment = null;
+            SelectedPerson = null;
+            return Task.CompletedTask;
         }
 
-        private async Task GetAllAsync()
+        public async Task GetAllAsync()
         {
             await GetPeopleAsync();
             await GetAssignmentsAsync();
             await GetWorkloadsAsync();
+        }
+
+        private async Task CreateWorkloadAsync()
+        {
+            if ((SelectedAssignment != null) && SelectedPerson != null)
+            {
+                logger.LogInformation($"Starting work for Person {SelectedPerson} and Assignment {SelectedAssignment}");
+                await workloadsService.StartWorkloadAsync(SelectedPerson.PersonId, SelectedAssignment.AssignmentId, Comment, DateTimeOffset.UtcNow);
+                Comment = "";
+                await GetWorkloadsAsync();
+            }
+        }
+
+        private async Task StopWorkloadAsync(int workloadId)
+        {
+            if (workloadId != 0)
+            {
+                logger.LogInformation($"Stopping work for workload id {workloadId}");
+                await workloadsService.StopWorkloadAsync(workloadId, DateTimeOffset.UtcNow);
+                await GetWorkloadsAsync();
+            }
         }
 
         private async Task GetPeopleAsync()
@@ -117,7 +142,9 @@ namespace WorkloadsClient.ViewModels
         private async Task GetWorkloadsAsync()
         {
             SelectedWorkload = null;
-            Workloads = await workloadsService.GetUnfinishedWorkloadsAsync(0, 0);
+            int p = SelectedPerson == null ? 0 : SelectedPerson.PersonId;
+            int a = SelectedAssignment == null ? 0 : SelectedAssignment.AssignmentId;
+            Workloads = await workloadsService.GetUnfinishedWorkloadsAsync(p, a);
         }
 
         private Task SetWorkloads(int personId = 0, int assignmentId = 0)
